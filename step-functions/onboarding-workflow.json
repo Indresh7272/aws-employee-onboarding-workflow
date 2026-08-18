@@ -1,0 +1,68 @@
+{
+  "Comment": "Employee Onboarding Workflow - Portfolio Version",
+  "StartAt": "ProcessEmployeeOnboarding",
+  "States": {
+    "ProcessEmployeeOnboarding": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Output": "{% $states.result.Payload %}",
+      "Arguments": {
+        "Payload": "{% $states.input %}",
+        "FunctionName": "arn:aws:lambda:<region>:<account-id>:function:<employee-identity-lambda>"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2,
+          "JitterStrategy": "FULL"
+        }
+      ],
+      "Next": "DynamoDB UpdateItem"
+    },
+    "DynamoDB UpdateItem": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Next": "ITProvisioning",
+      "Arguments": {
+        "TableName": "<employee-onboarding-table>",
+        "Key": {
+          "employeeId": {
+            "S": "{% $parse($states.input.body).employee.employeeId %}"
+          }
+        },
+        "UpdateExpression": "SET onboardingStatus = :status",
+        "ExpressionAttributeValues": {
+          ":status": {
+            "S": "DOCUMENT_COLLECTION_COMPLETED"
+          }
+        }
+      }
+    },
+    "ITProvisioning": {
+      "Type": "Pass",
+      "Output": "{% $merge([$states.input, {\"itProvisioning\": {\"stage\": \"IT_PROVISIONING\", \"status\": \"COMPLETED\"}}]) %}",
+      "Next": "PolicySignoff"
+    },
+    "PolicySignoff": {
+      "Type": "Pass",
+      "Output": "{% $merge([$states.input, {\"policySignoff\": {\"stage\": \"POLICY_SIGNOFF\", \"status\": \"COMPLETED\"}}]) %}",
+      "Next": "ManagerIntro"
+    },
+    "ManagerIntro": {
+      "Type": "Pass",
+      "Output": "{% $merge([$states.input, {\"managerIntro\": {\"stage\": \"MANAGER_INTRO\", \"status\": \"COMPLETED\"}}]) %}",
+      "Next": "WorkflowComplete"
+    },
+    "WorkflowComplete": {
+      "Type": "Succeed"
+    }
+  },
+  "QueryLanguage": "JSONata"
+}
