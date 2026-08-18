@@ -94,3 +94,7 @@ Resource identifiers in the Step Functions definition are represented using plac
 ## Note
 
 This is a sanitized portfolio representation and is not intended to reproduce or expose the original project's complete source code or infrastructure configuration.
+
+## Frontend Demo
+
+`frontend/employee.html` contains the Employee Onboarding dashboard page provided by a project teammate and included in this portfolio with permission. The page is included for project demonstration and is not presented as my original frontend development work.
